@@ -38,6 +38,7 @@ func (m *MemStore) Wait() {
 
 // --- Interface Implementation ---
 
+// Get retrieves a value for a specific persona, app, and key.
 func (m *MemStore) Get(personaID, appID, key string) (any, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -249,6 +250,7 @@ func (m *MemStore) Move(srcPersona, dstPersona, appID, key string) error {
 
 // --- Scoping Support ---
 
+// App returns an AppScope that "pins" the persona and application for subsequent operations.
 func (m *MemStore) App(personaID, appID string) AppScope {
 	return &memAppScope{
 		store:     m,
@@ -275,7 +277,7 @@ func (a *memAppScope) Delete(key string) error {
 	return a.store.Delete(a.personaID, a.appID, key)
 }
 
-func (a *memAppScope) Vault(masterKey []byte) VaultScope {
+func (a *memAppScope) Vault(masterKey []byte) any {
 	return &memVaultScope{
 		app:       a,
 		masterKey: masterKey,

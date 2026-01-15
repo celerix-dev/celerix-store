@@ -151,3 +151,6 @@ The store and SDK can be configured using environment variables.
 - `CELERIX_PORT`: The port the daemon will listen on (default: `7001`).
 - `CELERIX_DATA_DIR`: The path to the directory where data files are stored (default: `./data`).
 - `CELERIX_DISABLE_TLS`: Set to `true` to run the server over plain TCP.
+
+## Versioning
+Current Version: **v0.2.4**

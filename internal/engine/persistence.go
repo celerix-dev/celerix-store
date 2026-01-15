@@ -1,3 +1,4 @@
+// Package engine defines the core interfaces and types for the Celerix Store.
 package engine
 
 import (
@@ -15,6 +16,7 @@ type Persistence struct {
 	mu      sync.Mutex // Protects concurrent writes to the filesystem
 }
 
+// NewPersistence initializes a persistence handler.
 func NewPersistence(dir string) (*Persistence, error) {
 	// Ensure the data directory exists
 	if err := os.MkdirAll(dir, 0755); err != nil {
@@ -23,7 +25,7 @@ func NewPersistence(dir string) (*Persistence, error) {
 	return &Persistence{DataDir: dir}, nil
 }
 
-// SavePersona writes a single persona's data to a JSON file atomically
+// SavePersona writes a single persona's data to a JSON file atomically.
 func (p *Persistence) SavePersona(personaID string, data map[string]map[string]any) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -48,7 +50,7 @@ func (p *Persistence) SavePersona(personaID string, data map[string]map[string]a
 	return os.Rename(tempPath, filePath)
 }
 
-// LoadAll returns all persona data found in the data directory
+// LoadAll returns all persona data found in the data directory.
 func (p *Persistence) LoadAll() (map[string]map[string]map[string]any, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()

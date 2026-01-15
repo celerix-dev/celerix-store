@@ -196,6 +196,7 @@ func Set[T any](s engine.CelerixStore, personaID, appID, key string, val T) erro
 }
 
 // --- App and Vault Scopes ---
+// App returns a scoped interface for a specific persona and application.
 func (c *Client) App(personaID, appID string) engine.AppScope {
 	return &AppScope{
 		client:    c,
@@ -204,37 +205,44 @@ func (c *Client) App(personaID, appID string) engine.AppScope {
 	}
 }
 
+// AppScope is a scoped client that "remembers" its persona and application IDs.
 type AppScope struct {
 	client    *Client
 	personaID string
 	appID     string
 }
 
+// Set stores a value using the scoped persona and app.
 func (a *AppScope) Set(key string, val any) error {
 	return a.client.Set(a.personaID, a.appID, key, val)
 }
 
+// Get retrieves a value using the scoped persona and app.
 func (a *AppScope) Get(key string) (any, error) {
 	return a.client.Get(a.personaID, a.appID, key)
 }
 
+// Delete removes a key using the scoped persona and app.
 func (a *AppScope) Delete(key string) error {
 	return a.client.Delete(a.personaID, a.appID, key)
 }
 
-// Vault returns a scope that automatically encrypts/decrypts data
-func (a *AppScope) Vault(masterKey []byte) engine.VaultScope {
+// Vault returns a scope that automatically encrypts/decrypts data.
+// It returns any to satisfy the engine.AppScope interface.
+func (a *AppScope) Vault(masterKey []byte) any {
 	return &VaultScope{
 		app:       a,
 		masterKey: masterKey,
 	}
 }
 
+// VaultScope provides client-side encryption for sensitive data.
 type VaultScope struct {
 	app       *AppScope
 	masterKey []byte
 }
 
+// Set encrypts the plaintext and stores it in the scoped app.
 func (v *VaultScope) Set(key string, plaintext string) error {
 	// 1. Encrypt locally before sending
 	ciphertext, err := vault.Encrypt(plaintext, v.masterKey)
@@ -245,6 +253,7 @@ func (v *VaultScope) Set(key string, plaintext string) error {
 	return v.app.Set(key, ciphertext)
 }
 
+// Get retrieves and decrypts a value from the scoped app.
 func (v *VaultScope) Get(key string) (string, error) {
 	// 1. Get the encrypted hex string from the store
 	val, err := v.app.Get(key)

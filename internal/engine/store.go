@@ -58,7 +58,9 @@ type AppScope interface {
 	// Delete removes a key using the pinned persona and app.
 	Delete(key string) error
 	// Vault returns a VaultScope for client-side encrypted storage.
-	Vault(masterKey []byte) VaultScope
+	// We use any here to avoid hard-coding a specific return type in the shared interface,
+	// allowing implementations (like the SDK) to return their own types.
+	Vault(masterKey []byte) any
 }
 
 // VaultScope provides a scoped interface for performing client-side encryption.

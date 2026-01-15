@@ -116,12 +116,7 @@ type AppScope interface {
     Get(key string) (any, error)
     Set(key string, val any) error
     Delete(key string) error
-    Vault(masterKey []byte) VaultScope
-}
-
-type VaultScope interface {
-    Get(key string) (string, error)
-    Set(key string, plaintext string) error
+    Vault(masterKey []byte) any
 }
 ```
 
