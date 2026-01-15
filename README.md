@@ -10,6 +10,12 @@
 - **Thread-Safe & Crash-Resilient:** Uses deep-copy persistence and atomic file renames to ensure data integrity.
 - **Advanced Querying:** Supports cross-persona moves, global indexing, and batch app dumps.
 
+### Architecture: In-Memory with File-System Sync
+`celerix-store` is an **in-memory first** data store. 
+- **Performance:** All read operations are served directly from RAM, providing microsecond latency.
+- **Persistence:** Every write operation is synchronously applied to the in-memory state and asynchronously flushed to a 1:1 JSON file on disk.
+- **Reliability:** Uses atomic "write-then-rename" operations for the filesystem to prevent data corruption during crashes or power failures.
+
 ## Documentation
 - **[Usage Guide](USAGE.md):** Detailed guide on library usage, patterns, and best practices.
 

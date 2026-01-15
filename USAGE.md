@@ -9,6 +9,15 @@ This guide provides detailed examples and best practices for using the `celerix-
 - **App:** A namespace within a persona. This allows multiple applications to store data for the same persona without collisions.
 - **Key:** The specific identifier for a piece of data within an app namespace.
 
+### In-Memory Sync Architecture
+The `celerix-store` operates on an "In-Memory First" principle:
+1.  **RAM as Primary:** All data is held in an optimized `map` structure in memory.
+2.  **Filesystem as Secondary:** Each **Persona** is mapped 1:1 to a `.json` file in the data directory.
+3.  **Background Flush:** When you `Set` or `Delete` a key, the change is applied immediately to RAM. A background goroutine then takes a thread-safe snapshot and writes it to the corresponding persona file.
+4.  **Startup Load:** When the engine starts (either as a daemon or embedded), it scans the data directory and hydrates the memory state from all discovered `.json` files.
+
+This design ensures that Celerix applications enjoy ultra-low latency while maintaining a human-readable and portable disk footprint.
+
 ### The `_system` Persona
 The `_system` persona is a reserved namespace for global application metadata, registry of users, or any data that isn't tied to a specific human user. It is treated as a first-class citizen and optimized for discovery.
 
