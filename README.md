@@ -144,3 +144,6 @@ echo "LIST_PERSONAS" | openssl s_client -connect localhost:7001 -quiet
 - `CELERIX_PORT`: Port the daemon listens on (default: `7001`).
 - `CELERIX_DATA_DIR`: Directory where JSON files are stored (default: `./data`).
 - `CELERIX_DISABLE_TLS`: Set to `true` to revert to plain TCP.
+
+## License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
