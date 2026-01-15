@@ -6,8 +6,9 @@ import (
 	"github.com/celerix-dev/celerix-store/internal/engine"
 )
 
-// New initializes the store based on the environment.
-// It returns the Interface, so the app doesn't care if it's local or remote.
+// New initializes a CelerixStore based on the environment.
+// It automatically detects whether to connect to a remote server (via CELERIX_STORE_ADDR)
+// or initialize a local embedded engine.
 func New(dataDir string) (engine.CelerixStore, error) {
 	// 1. Check if a Remote Store is defined in Environment Variables
 	remoteAddr := os.Getenv("CELERIX_STORE_ADDR")

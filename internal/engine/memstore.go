@@ -1,3 +1,4 @@
+// Package engine defines the core interfaces and types for the Celerix Store.
 package engine
 
 import (
@@ -7,7 +8,8 @@ import (
 	"github.com/celerix-dev/celerix-store/internal/vault"
 )
 
-// MemStore is our thread-safe "Liquid Data" engine.
+// MemStore is a thread-safe, in-memory implementation of the CelerixStore interface.
+// It supports asynchronous persistence to JSON files.
 type MemStore struct {
 	mu sync.RWMutex
 	// Structure: [personaID][appID][key]value

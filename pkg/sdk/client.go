@@ -1,3 +1,5 @@
+// Package sdk provides the client-side library for interacting with the Celerix Store.
+// It supports both remote connections via TCP/TLS and local embedded mode.
 package sdk
 
 import (
@@ -15,12 +17,16 @@ import (
 	"github.com/celerix-dev/celerix-store/internal/vault"
 )
 
+// Client is a remote client for the Celerix Store.
+// It implements the engine.CelerixStore interface.
 type Client struct {
 	conn   net.Conn
 	reader *bufio.Reader
 	mu     sync.Mutex // Protects concurrent access to the connection
 }
 
+// Connect establishes a TLS-encrypted connection to a remote Celerix Store daemon.
+// If CELERIX_DISABLE_TLS is set to "true", it falls back to plain TCP.
 func Connect(addr string) (*Client, error) {
 	var conn net.Conn
 	var err error
@@ -160,7 +166,8 @@ func (c *Client) Close() error {
 
 // --- Generics Support (Go 1.18+) ---
 
-// Get is a type-safe helper for retrieving values.
+// Get retrieves a type-safe value using Go generics.
+// It handles JSON unmarshaling into the target type automatically.
 func Get[T any](s engine.CelerixStore, personaID, appID, key string) (T, error) {
 	var target T
 	val, err := s.Get(personaID, appID, key)
@@ -183,7 +190,7 @@ func Get[T any](s engine.CelerixStore, personaID, appID, key string) (T, error) 
 	return target, err
 }
 
-// Set is a type-safe helper for storing values.
+// Set stores a type-safe value using Go generics.
 func Set[T any](s engine.CelerixStore, personaID, appID, key string, val T) error {
 	return s.Set(personaID, appID, key, val)
 }

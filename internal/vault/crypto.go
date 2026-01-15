@@ -1,3 +1,4 @@
+// Package vault provides security primitives including AES-GCM encryption and TLS certificate generation.
 package vault
 
 import (
