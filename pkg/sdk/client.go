@@ -189,7 +189,7 @@ func Set[T any](s engine.CelerixStore, personaID, appID, key string, val T) erro
 }
 
 // --- App and Vault Scopes ---
-func (c *Client) App(personaID, appID string) *AppScope {
+func (c *Client) App(personaID, appID string) engine.AppScope {
 	return &AppScope{
 		client:    c,
 		personaID: personaID,
@@ -216,7 +216,7 @@ func (a *AppScope) Delete(key string) error {
 }
 
 // Vault returns a scope that automatically encrypts/decrypts data
-func (a *AppScope) Vault(masterKey []byte) *VaultScope {
+func (a *AppScope) Vault(masterKey []byte) engine.VaultScope {
 	return &VaultScope{
 		app:       a,
 		masterKey: masterKey,

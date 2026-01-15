@@ -37,4 +37,21 @@ type CelerixStore interface {
 
 	// Move transfers a key from one persona to another within the same app.
 	Move(srcPersona, dstPersona, appID, key string) error
+
+	// App creates a scoped store for a specific persona and app.
+	App(personaID, appID string) AppScope
+}
+
+// AppScope is a scoped interface for a specific persona and app.
+type AppScope interface {
+	Get(key string) (any, error)
+	Set(key string, val any) error
+	Delete(key string) error
+	Vault(masterKey []byte) VaultScope
+}
+
+// VaultScope is a scoped interface for encrypted storage.
+type VaultScope interface {
+	Get(key string) (string, error)
+	Set(key string, plaintext string) error
 }

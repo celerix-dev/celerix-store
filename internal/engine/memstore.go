@@ -1,7 +1,10 @@
 package engine
 
 import (
+	"fmt"
 	"sync"
+
+	"github.com/celerix-dev/celerix-store/internal/vault"
 )
 
 // MemStore is our thread-safe "Liquid Data" engine.
@@ -240,4 +243,64 @@ func (m *MemStore) Move(srcPersona, dstPersona, appID, key string) error {
 	}
 
 	return nil
+}
+
+// --- Scoping Support ---
+
+func (m *MemStore) App(personaID, appID string) AppScope {
+	return &memAppScope{
+		store:     m,
+		personaID: personaID,
+		appID:     appID,
+	}
+}
+
+type memAppScope struct {
+	store     *MemStore
+	personaID string
+	appID     string
+}
+
+func (a *memAppScope) Get(key string) (any, error) {
+	return a.store.Get(a.personaID, a.appID, key)
+}
+
+func (a *memAppScope) Set(key string, val any) error {
+	return a.store.Set(a.personaID, a.appID, key, val)
+}
+
+func (a *memAppScope) Delete(key string) error {
+	return a.store.Delete(a.personaID, a.appID, key)
+}
+
+func (a *memAppScope) Vault(masterKey []byte) VaultScope {
+	return &memVaultScope{
+		app:       a,
+		masterKey: masterKey,
+	}
+}
+
+type memVaultScope struct {
+	app       *memAppScope
+	masterKey []byte
+}
+
+func (v *memVaultScope) Set(key string, plaintext string) error {
+	ciphertext, err := vault.Encrypt(plaintext, v.masterKey)
+	if err != nil {
+		return err
+	}
+	return v.app.Set(key, ciphertext)
+}
+
+func (v *memVaultScope) Get(key string) (string, error) {
+	val, err := v.app.Get(key)
+	if err != nil {
+		return "", err
+	}
+	cipherHex, ok := val.(string)
+	if !ok {
+		return "", fmt.Errorf("stored value is not a string")
+	}
+	return vault.Decrypt(cipherHex, v.masterKey)
 }
