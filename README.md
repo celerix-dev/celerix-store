@@ -67,7 +67,7 @@ In your code, `sdk.New("./data")` will automatically detect the address and conn
 ### App Scopes
 Instead of passing IDs every time, use a scope:
 ```go
-app := store.(*sdk.Client).App("persona1", "my-app")
+app := store.App("persona1", "my-app")
 app.Set("volume", 80)
 ```
 
@@ -96,6 +96,26 @@ type CelerixStore interface {
     GetApps(personaID string) ([]string, error)
     GetPersonas() ([]string, error)
     GetAppStore(personaID, appID string) (map[string]any, error)
+
+    // Advanced Querying
+    DumpApp(appID string) (map[string]map[string]any, error)
+    GetGlobal(appID, key string) (any, string, error)
+    Move(srcPersona, dstPersona, appID, key string) error
+
+    // Scoping
+    App(personaID, appID string) AppScope
+}
+
+type AppScope interface {
+    Get(key string) (any, error)
+    Set(key string, val any) error
+    Delete(key string) error
+    Vault(masterKey []byte) VaultScope
+}
+
+type VaultScope interface {
+    Get(key string) (string, error)
+    Set(key string, plaintext string) error
 }
 ```
 
@@ -114,5 +134,7 @@ echo "LIST_PERSONAS" | openssl s_client -connect localhost:7001 -quiet
 ```
 
 ## Environment Variables
-- `CELERIX_STORE_ADDR`: Remote daemon address (e.g., `localhost:7001`).
+- `CELERIX_STORE_ADDR`: Remote daemon address (e.g., `localhost:7001`). Used by the SDK and CLI.
+- `CELERIX_PORT`: Port the daemon listens on (default: `7001`).
+- `CELERIX_DATA_DIR`: Directory where JSON files are stored (default: `./data`).
 - `CELERIX_DISABLE_TLS`: Set to `true` to revert to plain TCP.

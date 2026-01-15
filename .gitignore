@@ -2,3 +2,4 @@
 data
 celerix-cli
 /celerix-stored
+.env

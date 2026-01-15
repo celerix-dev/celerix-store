@@ -14,10 +14,17 @@ import (
 
 func main() {
 	fmt.Println("Starting Celerix Store Daemon...")
+	
+	dataDir := os.Getenv("CELERIX_DATA_DIR")
+	if dataDir == "" {
+		dataDir = "./data"
+	}
 
-	// 1. Configuration (Could be moved to Env Vars later)
-	dataDir := "./data"
-	port := "7001"
+	port := os.Getenv("CELERIX_PORT")
+	if port == "" {
+		port = "7001"
+	}
+
 	useTLS := os.Getenv("CELERIX_DISABLE_TLS") != "true"
 
 	// 2. Initialize Persistence

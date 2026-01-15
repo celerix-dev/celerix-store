@@ -32,14 +32,38 @@ func main() {
 ```
 
 ### Basic CRUD
-The SDK now supports generics for type-safe operations (Go 1.18+).
+The SDK supports standard KV operations. It also includes generics for type-safe operations (Go 1.18+).
 
 ```go
-// Set a value
+// Standard Set (returns error)
+err := store.Set("persona1", "my-app", "theme", "dark")
+
+// Standard Get (returns any, error)
+val, err := store.Get("persona1", "my-app", "theme")
+
+// Standard Delete (returns error)
+err := store.Delete("persona1", "my-app", "theme")
+
+// Type-Safe Set (Generics)
 err := sdk.Set[string](store, "persona1", "my-app", "theme", "dark")
 
-// Get a value
+// Type-Safe Get (Generics)
 val, err := sdk.Get[string](store, "persona1", "my-app", "theme")
+```
+
+### Discovery and Enumeration
+Methods to explore the store's structure.
+
+```go
+// List all personas
+personas, _ := store.GetPersonas() // []string
+
+// List all apps for a specific persona
+apps, _ := store.GetApps("persona1") // []string
+
+// Dump all keys/values for a specific app (single persona)
+// Returns map[string]any
+data, _ := store.GetAppStore("persona1", "my-app")
 ```
 
 ---
@@ -81,29 +105,40 @@ err := store.Move("old-owner", "new-owner", "my-app", "document-123")
 ```
 
 ### The Vault (Client-Side Encryption)
-Encrypt sensitive data before it ever leaves your application process.
+Encrypt sensitive data before it ever leaves your application process. `Vault` works only with string values and uses AES-GCM encryption.
 
 ```go
 masterKey := []byte("a-very-secret-32-byte-long-key!!")
 vault := app.Vault(masterKey)
 
 // Encrypted in transit and at rest
-vault.Set("api_key", "sk-123456")
+err := vault.Set("api_key", "sk-123456")
 
 // Decrypted locally
-key, _ := vault.Get("api_key")
+val, err := vault.Get("api_key")
+```
+
+### Deleting Data
+You can delete data at the key level.
+
+```go
+// Direct delete
+err := store.Delete("persona1", "my-app", "key1")
+
+// Via App Scope
+err := app.Delete("key1")
 ```
 
 ---
 
-## Migration and Backups
+## Environment Variables
+The store and SDK can be configured using environment variables.
 
-You can easily move data between embedded and remote stores using the `Migrate` utility.
+### Client & SDK Variables
+- `CELERIX_STORE_ADDR`: Address of the remote store (e.g., `localhost:7001`). If not set, the SDK defaults to **Embedded Mode**.
+- `CELERIX_DISABLE_TLS`: Set to `true` to disable TLS for network communication.
 
-```go
-localStore, _ := sdk.New("./data")
-remoteStore, _ := sdk.Connect("localhost:7001")
-
-// Upgrade local data to the shared server
-err := sdk.Migrate(localStore, remoteStore)
-```
+### Daemon (Server) Variables
+- `CELERIX_PORT`: The port the daemon will listen on (default: `7001`).
+- `CELERIX_DATA_DIR`: The path to the directory where data files are stored (default: `./data`).
+- `CELERIX_DISABLE_TLS`: Set to `true` to run the server over plain TCP.
