@@ -161,3 +161,83 @@ func (m *MemStore) GetAppStore(personaID, appID string) (map[string]any, error) 
 	}
 	return nil, ErrAppNotFound
 }
+
+func (m *MemStore) DumpApp(appID string) (map[string]map[string]any, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	result := make(map[string]map[string]any)
+	for personaID, apps := range m.data {
+		if appData, ok := apps[appID]; ok {
+			appCopy := make(map[string]any)
+			for k, v := range appData {
+				appCopy[k] = v
+			}
+			result[personaID] = appCopy
+		}
+	}
+	return result, nil
+}
+
+func (m *MemStore) GetGlobal(appID, key string) (any, string, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	for personaID, apps := range m.data {
+		if appData, ok := apps[appID]; ok {
+			if val, ok := appData[key]; ok {
+				return val, personaID, nil
+			}
+		}
+	}
+	return nil, "", ErrKeyNotFound
+}
+
+func (m *MemStore) Move(srcPersona, dstPersona, appID, key string) error {
+	m.mu.Lock()
+	// 1. Check if source exists
+	srcP, ok := m.data[srcPersona]
+	if !ok {
+		m.mu.Unlock()
+		return ErrPersonaNotFound
+	}
+	srcA, ok := srcP[appID]
+	if !ok {
+		m.mu.Unlock()
+		return ErrAppNotFound
+	}
+	val, ok := srcA[key]
+	if !ok {
+		m.mu.Unlock()
+		return ErrKeyNotFound
+	}
+
+	// 2. Perform Move
+	delete(srcA, key)
+	if m.data[dstPersona] == nil {
+		m.data[dstPersona] = make(map[string]map[string]any)
+	}
+	if m.data[dstPersona][appID] == nil {
+		m.data[dstPersona][appID] = make(map[string]any)
+	}
+	m.data[dstPersona][appID][key] = val
+
+	// 3. Prepare background persistence for BOTH personas
+	srcCopy := m.copyPersonaData(srcPersona)
+	dstCopy := m.copyPersonaData(dstPersona)
+	m.mu.Unlock()
+
+	if m.persister != nil {
+		m.wg.Add(2)
+		go func() {
+			defer m.wg.Done()
+			m.persister.SavePersona(srcPersona, srcCopy)
+		}()
+		go func() {
+			defer m.wg.Done()
+			m.persister.SavePersona(dstPersona, dstCopy)
+		}()
+	}
+
+	return nil
+}

@@ -93,6 +93,37 @@ func main() {
 		}
 		printJSON(data)
 
+	case "DUMP_APP":
+		if len(args) < 1 {
+			log.Fatal("Usage: celerix DUMP_APP <appID>")
+		}
+		data, err := client.DumpApp(args[0])
+		if err != nil {
+			log.Fatal(err)
+		}
+		printJSON(data)
+
+	case "GET_GLOBAL":
+		if len(args) < 2 {
+			log.Fatal("Usage: celerix GET_GLOBAL <appID> <key>")
+		}
+		val, personaID, err := client.GetGlobal(args[0], args[1])
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("Persona: %s\n", personaID)
+		printJSON(val)
+
+	case "MOVE":
+		if len(args) < 4 {
+			log.Fatal("Usage: celerix MOVE <srcPersona> <dstPersona> <appID> <key>")
+		}
+		err := client.Move(args[0], args[1], args[2], args[3])
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println("OK")
+
 	case "PING":
 		// PING is not explicitly in SDK but we can implement it or just use a simple check
 		// For now let's just use LIST_PERSONAS as a health check or add Ping to SDK
@@ -113,6 +144,9 @@ func printUsage() {
 	fmt.Println("  celerix LIST_PERSONAS")
 	fmt.Println("  celerix LIST_APPS <personaID>")
 	fmt.Println("  celerix DUMP <personaID> <appID>")
+	fmt.Println("  celerix DUMP_APP <appID>")
+	fmt.Println("  celerix GET_GLOBAL <appID> <key>")
+	fmt.Println("  celerix MOVE <srcPersona> <dstPersona> <appID> <key>")
 	fmt.Println("  celerix PING")
 	fmt.Println("\nEnvironment Variables:")
 	fmt.Println("  CELERIX_STORE_ADDR    Address of the store (default: localhost:7001)")

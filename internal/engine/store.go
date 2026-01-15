@@ -8,6 +8,8 @@ var (
 	ErrKeyNotFound     = errors.New("key not found")
 )
 
+const SystemPersona = "_system"
+
 // CelerixStore is the "Contract".
 // Both the Server and the Embedded engine must satisfy this.
 type CelerixStore interface {
@@ -22,4 +24,17 @@ type CelerixStore interface {
 
 	// GetAppStore Bulk (Used for Migration & Backups)
 	GetAppStore(personaID, appID string) (map[string]any, error)
+
+	// --- New features ---
+
+	// DumpApp returns data for a specific app across ALL personas.
+	// Returns map[personaID]map[key]value
+	DumpApp(appID string) (map[string]map[string]any, error)
+
+	// GetGlobal searches for a key across all personas for a specific app.
+	// Returns (value, personaID, error)
+	GetGlobal(appID, key string) (any, string, error)
+
+	// Move transfers a key from one persona to another within the same app.
+	Move(srcPersona, dstPersona, appID, key string) error
 }

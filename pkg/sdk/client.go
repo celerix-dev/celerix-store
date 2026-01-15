@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/celerix-dev/celerix-store/internal/engine"
 	"github.com/celerix-dev/celerix-store/internal/vault"
 )
 
@@ -122,12 +123,72 @@ func (c *Client) GetAppStore(personaID, appID string) (map[string]any, error) {
 	return store, err
 }
 
+func (c *Client) DumpApp(appID string) (map[string]map[string]any, error) {
+	resp, err := c.sendAndReceive(fmt.Sprintf("DUMP_APP %s", appID))
+	if err != nil {
+		return nil, err
+	}
+	jsonData := strings.TrimPrefix(resp, "OK ")
+	var store map[string]map[string]any
+	err = json.Unmarshal([]byte(jsonData), &store)
+	return store, err
+}
+
+func (c *Client) GetGlobal(appID, key string) (any, string, error) {
+	resp, err := c.sendAndReceive(fmt.Sprintf("GET_GLOBAL %s %s", appID, key))
+	if err != nil {
+		return nil, "", err
+	}
+	jsonData := strings.TrimPrefix(resp, "OK ")
+	var out struct {
+		Persona string `json:"persona"`
+		Value   any    `json:"value"`
+	}
+	err = json.Unmarshal([]byte(jsonData), &out)
+	return out.Value, out.Persona, err
+}
+
+func (c *Client) Move(srcPersona, dstPersona, appID, key string) error {
+	_, err := c.sendAndReceive(fmt.Sprintf("MOVE %s %s %s %s", srcPersona, dstPersona, appID, key))
+	return err
+}
+
 func (c *Client) Close() error {
 	fmt.Fprintln(c.conn, "QUIT")
 	return c.conn.Close()
 }
 
-// App returns a helper that "remembers" the Persona and App IDs
+// --- Generics Support (Go 1.18+) ---
+
+// Get is a type-safe helper for retrieving values.
+func Get[T any](s engine.CelerixStore, personaID, appID, key string) (T, error) {
+	var target T
+	val, err := s.Get(personaID, appID, key)
+	if err != nil {
+		return target, err
+	}
+
+	// If it's already the right type (e.g. from MemStore), just return it
+	if v, ok := val.(T); ok {
+		return v, nil
+	}
+
+	// Otherwise, it might be a map/slice from JSON, so we re-marshal/unmarshal
+	// This is a bit slow but ensures type safety for the caller.
+	bytes, err := json.Marshal(val)
+	if err != nil {
+		return target, err
+	}
+	err = json.Unmarshal(bytes, &target)
+	return target, err
+}
+
+// Set is a type-safe helper for storing values.
+func Set[T any](s engine.CelerixStore, personaID, appID, key string, val T) error {
+	return s.Set(personaID, appID, key, val)
+}
+
+// --- App and Vault Scopes ---
 func (c *Client) App(personaID, appID string) *AppScope {
 	return &AppScope{
 		client:    c,

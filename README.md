@@ -8,6 +8,10 @@
 - **Transparent Discovery:** The SDK automatically detects whether to run locally or connect to a remote server.
 - **End-to-End Security:** Includes a "Vault" layer for client-side AES-GCM encryption and automatic TLS for network traffic.
 - **Thread-Safe & Crash-Resilient:** Uses deep-copy persistence and atomic file renames to ensure data integrity.
+- **Advanced Querying:** Supports cross-persona moves, global indexing, and batch app dumps.
+
+## Documentation
+- **[Usage Guide](USAGE.md):** Detailed guide on library usage, patterns, and best practices.
 
 ## Installation
 

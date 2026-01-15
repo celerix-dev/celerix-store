@@ -177,6 +177,55 @@ func (r *Router) handleConnection(conn net.Conn) {
 				}
 			}
 
+		case "DUMP_APP":
+			if len(parts) < 2 {
+				continue
+			}
+			data, err := r.store.DumpApp(parts[1])
+			if err != nil {
+				fmt.Fprintln(conn, "ERR", err)
+			} else {
+				res, err := json.Marshal(data)
+				if err != nil {
+					fmt.Fprintln(conn, "ERR internal error")
+				} else {
+					fmt.Fprintln(conn, "OK", string(res))
+				}
+			}
+
+		case "GET_GLOBAL":
+			if len(parts) < 3 {
+				continue
+			}
+			val, personaID, err := r.store.GetGlobal(parts[1], parts[2])
+			if err != nil {
+				fmt.Fprintln(conn, "ERR", err)
+			} else {
+				// We return a small JSON object with both value and persona
+				out := map[string]any{
+					"persona": personaID,
+					"value":   val,
+				}
+				final, err := json.Marshal(out)
+				if err != nil {
+					fmt.Fprintln(conn, "ERR internal error")
+				} else {
+					fmt.Fprintln(conn, "OK", string(final))
+				}
+			}
+
+		case "MOVE":
+			if len(parts) < 5 {
+				continue
+			}
+			// MOVE src dst app key
+			err := r.store.Move(parts[1], parts[2], parts[3], parts[4])
+			if err != nil {
+				fmt.Fprintln(conn, "ERR", err)
+			} else {
+				fmt.Fprintln(conn, "OK")
+			}
+
 		case "PING":
 			fmt.Fprintln(conn, "PONG")
 
