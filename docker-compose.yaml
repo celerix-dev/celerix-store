@@ -1,0 +1,16 @@
+services:
+  celerix-store:
+    build: .
+    ports:
+      - "7001:7001"
+    volumes:
+      - ./store-data:/app/data
+    environment:
+      - CELERIX_DISABLE_TLS=false # Default is true (enabled), but can be explicitly set
+
+  myapp:
+    image: my-celerix-app
+    environment:
+      - CELERIX_STORE_ADDR=celerix-store:7001
+    depends_on:
+      - celerix-store
