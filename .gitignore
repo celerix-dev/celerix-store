@@ -1,4 +1,4 @@
 .idea
 data
 celerix-cli
-celerix-stored
+/celerix-stored
