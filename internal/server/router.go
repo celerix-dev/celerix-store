@@ -50,9 +50,6 @@ func (r *Router) Listen(port string) error {
 			continue
 		}
 
-		// Set aggressive timeouts for light traffic to prevent resource exhaustion
-		conn.SetDeadline(time.Now().Add(5 * time.Minute))
-
 		go func(c net.Conn) {
 			semaphore <- struct{}{}
 			defer func() {

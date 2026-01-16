@@ -94,8 +94,11 @@ func (c *Client) sendAndReceive(cmd string) (string, error) {
 		// If we got here, there was an error communicating.
 		// Try to reconnect once if this was the first attempt.
 		if i == 0 {
+			// Log the error and the fact that we're retrying
+			fmt.Fprintf(os.Stderr, "[Celerix SDK] Communication error: %v. Attempting to reconnect...\n", err)
+
 			if reconnectErr := c.reconnect(); reconnectErr != nil {
-				// Reconnect failed, return the original communication error
+				fmt.Fprintf(os.Stderr, "[Celerix SDK] Reconnection failed: %v\n", reconnectErr)
 				return "", err
 			}
 			// Reconnect succeeded, loop and try the command again
