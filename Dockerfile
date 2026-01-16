@@ -1,23 +1,29 @@
-# --- Stage 1: Build (Same as before) ---
+# Stage 1: Build the frontend
+FROM node:20-alpine AS frontend-builder
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ ./
+RUN npm run build
+
+# Stage 2: Build the backend
 FROM golang:1.25.1-alpine AS builder
 WORKDIR /app
-COPY go.mod ./
+COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-# We MUST build a static binary (CGO_ENABLED=0) for distroless
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o celerix-stored ./cmd/celerix-stored/main.go
+# Copy the built frontend to the backend directory for embedding
+COPY --from=frontend-builder /app/frontend/dist ./cmd/celerix-stored/dist
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o celerix-stored ./cmd/celerix-stored/main.go
 
-# --- Stage 2: Distroless Final Image ---
-# "static" is the smallest version, containing only tzdata and ca-certs
-FROM gcr.io/distroless/static-debian12
-
-WORKDIR /
-
-# Copy the binary from the builder
-COPY --from=builder /app/celerix-stored /celerix-stored
-
-# Distroless doesn't have a shell, so we must use the "exec" form
-# We also ensure the data directory is handled via a Volume in Compose
-EXPOSE 7001
-
-ENTRYPOINT ["/celerix-stored"]
+# Stage 3: Final Image
+FROM alpine:latest
+RUN apk add --no-cache ca-certificates
+WORKDIR /app
+COPY --from=builder /app/celerix-stored .
+RUN mkdir -p data
+EXPOSE 7001 7002
+ENV CELERIX_PORT=7001
+ENV CELERIX_HTTP_PORT=7002
+ENV CELERIX_DATA_DIR=/app/data
+CMD ["./celerix-stored"]
