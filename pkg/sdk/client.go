@@ -36,12 +36,17 @@ func Connect(addr string) (*Client, error) {
 }
 
 func (c *Client) reconnect() error {
+	if c.conn != nil {
+		c.conn.Close()
+		c.conn = nil
+	}
+
 	var conn net.Conn
 	var err error
 
 	dialer := &net.Dialer{
 		Timeout:   10 * time.Second,
-		KeepAlive: 30 * time.Second,
+		KeepAlive: 60 * time.Second, // Increased keep-alive
 	}
 
 	if os.Getenv("CELERIX_DISABLE_TLS") == "true" {
@@ -57,10 +62,6 @@ func (c *Client) reconnect() error {
 		return err
 	}
 
-	if c.conn != nil {
-		c.conn.Close()
-	}
-
 	c.conn = conn
 	c.reader = bufio.NewReader(conn)
 	return nil
@@ -71,11 +72,20 @@ func (c *Client) sendAndReceive(cmd string) (string, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	// Try up to 2 times (initial attempt + 1 retry if connection is broken)
 	var err error
 	var resp string
 
-	for i := 0; i < 2; i++ {
+	// Try up to 3 times with exponential backoff
+	for i := 0; i < 3; i++ {
+		// Ensure we have a connection
+		if c.conn == nil {
+			if reconnectErr := c.reconnect(); reconnectErr != nil {
+				err = fmt.Errorf("reconnect failed: %w", reconnectErr)
+				time.Sleep(time.Duration(i*100) * time.Millisecond)
+				continue
+			}
+		}
+
 		// Set deadlines for the operation
 		c.conn.SetDeadline(time.Now().Add(30 * time.Second))
 
@@ -92,21 +102,18 @@ func (c *Client) sendAndReceive(cmd string) (string, error) {
 		}
 
 		// If we got here, there was an error communicating.
-		// Try to reconnect once if this was the first attempt.
-		if i == 0 {
-			// Log the error and the fact that we're retrying
-			fmt.Fprintf(os.Stderr, "[Celerix SDK] Communication error: %v. Attempting to reconnect...\n", err)
+		fmt.Fprintf(os.Stderr, "[Celerix SDK] Attempt %d failed: %v. Reconnecting...\n", i+1, err)
 
-			if reconnectErr := c.reconnect(); reconnectErr != nil {
-				fmt.Fprintf(os.Stderr, "[Celerix SDK] Reconnection failed: %v\n", reconnectErr)
-				return "", err
-			}
-			// Reconnect succeeded, loop and try the command again
-			continue
+		// Force a reconnect on the next iteration
+		if closeErr := c.reconnect(); closeErr != nil {
+			fmt.Fprintf(os.Stderr, "[Celerix SDK] Reconnect attempt failed: %v\n", closeErr)
 		}
+
+		// Wait before retrying (exponential backoff)
+		time.Sleep(time.Duration((i+1)*200) * time.Millisecond)
 	}
 
-	return "", err
+	return "", fmt.Errorf("failed after 3 attempts. last error: %v", err)
 }
 
 func (c *Client) Get(personaID, appID, key string) (any, error) {

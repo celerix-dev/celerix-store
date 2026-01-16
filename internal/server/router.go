@@ -51,7 +51,15 @@ func (r *Router) Listen(port string) error {
 		}
 
 		go func(c net.Conn) {
-			semaphore <- struct{}{}
+			select {
+			case semaphore <- struct{}{}:
+				// Acquired semaphore
+			default:
+				fmt.Println("[Celerix Store] Server busy: too many concurrent connections. Rejecting...")
+				c.Close()
+				return
+			}
+
 			defer func() {
 				<-semaphore
 				c.Close()
