@@ -4,7 +4,7 @@ services:
     ports:
       - "7001:7001"
     volumes:
-      - ./store-data:/app/data
+      - ./data:/app/data
     environment:
       - CELERIX_DISABLE_TLS=false # Default is true (enabled), but can be explicitly set
 

@@ -19,6 +19,7 @@ import (
 // Client is a remote client for the Celerix Store.
 // It implements the CelerixStore interface.
 type Client struct {
+	addr   string
 	conn   net.Conn
 	reader *bufio.Reader
 	mu     sync.Mutex // Protects concurrent access to the connection
@@ -27,27 +28,42 @@ type Client struct {
 // Connect establishes a TLS-encrypted connection to a remote Celerix Store daemon.
 // If CELERIX_DISABLE_TLS is set to "true", it falls back to plain TCP.
 func Connect(addr string) (*Client, error) {
+	c := &Client{addr: addr}
+	if err := c.reconnect(); err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+func (c *Client) reconnect() error {
 	var conn net.Conn
 	var err error
 
-	dialer := &net.Dialer{Timeout: 10 * time.Second}
+	dialer := &net.Dialer{
+		Timeout:   10 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}
 
 	if os.Getenv("CELERIX_DISABLE_TLS") == "true" {
-		conn, err = dialer.Dial("tcp", addr)
+		conn, err = dialer.Dial("tcp", c.addr)
 	} else {
 		config := &tls.Config{
 			InsecureSkipVerify: true, // We use self-signed certs for internal traffic
 		}
-		conn, err = tls.DialWithDialer(dialer, "tcp", addr, config)
+		conn, err = tls.DialWithDialer(dialer, "tcp", c.addr, config)
 	}
 
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return &Client{
-		conn:   conn,
-		reader: bufio.NewReader(conn),
-	}, nil
+
+	if c.conn != nil {
+		c.conn.Close()
+	}
+
+	c.conn = conn
+	c.reader = bufio.NewReader(conn)
+	return nil
 }
 
 // Internal helper for TCP communication
@@ -55,22 +71,39 @@ func (c *Client) sendAndReceive(cmd string) (string, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	// Set deadlines for the operation
-	c.conn.SetDeadline(time.Now().Add(30 * time.Second))
+	// Try up to 2 times (initial attempt + 1 retry if connection is broken)
+	var err error
+	var resp string
 
-	_, err := fmt.Fprint(c.conn, cmd+"\n")
-	if err != nil {
-		return "", err
+	for i := 0; i < 2; i++ {
+		// Set deadlines for the operation
+		c.conn.SetDeadline(time.Now().Add(30 * time.Second))
+
+		_, err = fmt.Fprint(c.conn, cmd+"\n")
+		if err == nil {
+			resp, err = c.reader.ReadString('\n')
+			if err == nil {
+				resp = strings.TrimSpace(resp)
+				if strings.HasPrefix(resp, "ERR") {
+					return "", fmt.Errorf("%s", strings.TrimPrefix(resp, "ERR "))
+				}
+				return resp, nil
+			}
+		}
+
+		// If we got here, there was an error communicating.
+		// Try to reconnect once if this was the first attempt.
+		if i == 0 {
+			if reconnectErr := c.reconnect(); reconnectErr != nil {
+				// Reconnect failed, return the original communication error
+				return "", err
+			}
+			// Reconnect succeeded, loop and try the command again
+			continue
+		}
 	}
-	resp, err := c.reader.ReadString('\n')
-	if err != nil {
-		return "", err
-	}
-	resp = strings.TrimSpace(resp)
-	if strings.HasPrefix(resp, "ERR") {
-		return "", fmt.Errorf("%s", strings.TrimPrefix(resp, "ERR "))
-	}
-	return resp, nil
+
+	return "", err
 }
 
 func (c *Client) Get(personaID, appID, key string) (any, error) {

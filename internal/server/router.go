@@ -68,8 +68,8 @@ func (r *Router) handleConnection(conn net.Conn) {
 	reader := bufio.NewReader(conn)
 
 	for {
-		// Set a deadline for the next command
-		conn.SetReadDeadline(time.Now().Add(30 * time.Second))
+		// Set a deadline for the next command (5 minutes idle timeout)
+		conn.SetReadDeadline(time.Now().Add(5 * time.Minute))
 
 		line, err := reader.ReadString('\n')
 		if err != nil {
