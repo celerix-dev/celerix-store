@@ -9,15 +9,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/celerix-dev/celerix-store/internal/engine"
+	"github.com/celerix-dev/celerix-store/pkg/sdk"
 )
 
 type Router struct {
-	store engine.CelerixStore
+	store sdk.CelerixStore
 	cert  *tls.Certificate
 }
 
-func NewRouter(s engine.CelerixStore) *Router {
+func NewRouter(s sdk.CelerixStore) *Router {
 	return &Router{store: s}
 }
 

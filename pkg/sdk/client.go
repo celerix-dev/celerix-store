@@ -13,12 +13,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/celerix-dev/celerix-store/internal/engine"
 	"github.com/celerix-dev/celerix-store/internal/vault"
 )
 
 // Client is a remote client for the Celerix Store.
-// It implements the engine.CelerixStore interface.
+// It implements the CelerixStore interface.
 type Client struct {
 	conn   net.Conn
 	reader *bufio.Reader
@@ -168,7 +167,7 @@ func (c *Client) Close() error {
 
 // Get retrieves a type-safe value using Go generics.
 // It handles JSON unmarshaling into the target type automatically.
-func Get[T any](s engine.CelerixStore, personaID, appID, key string) (T, error) {
+func Get[T any](s KVReader, personaID, appID, key string) (T, error) {
 	var target T
 	val, err := s.Get(personaID, appID, key)
 	if err != nil {
@@ -191,59 +190,59 @@ func Get[T any](s engine.CelerixStore, personaID, appID, key string) (T, error) 
 }
 
 // Set stores a type-safe value using Go generics.
-func Set[T any](s engine.CelerixStore, personaID, appID, key string, val T) error {
+func Set[T any](s KVWriter, personaID, appID, key string, val T) error {
 	return s.Set(personaID, appID, key, val)
 }
 
 // --- App and Vault Scopes ---
 // App returns a scoped interface for a specific persona and application.
-func (c *Client) App(personaID, appID string) engine.AppScope {
-	return &AppScope{
+func (c *Client) App(personaID, appID string) AppScope {
+	return &RemoteAppScope{
 		client:    c,
 		personaID: personaID,
 		appID:     appID,
 	}
 }
 
-// AppScope is a scoped client that "remembers" its persona and application IDs.
-type AppScope struct {
+// RemoteAppScope is a scoped client that "remembers" its persona and application IDs.
+type RemoteAppScope struct {
 	client    *Client
 	personaID string
 	appID     string
 }
 
 // Set stores a value using the scoped persona and app.
-func (a *AppScope) Set(key string, val any) error {
+func (a *RemoteAppScope) Set(key string, val any) error {
 	return a.client.Set(a.personaID, a.appID, key, val)
 }
 
 // Get retrieves a value using the scoped persona and app.
-func (a *AppScope) Get(key string) (any, error) {
+func (a *RemoteAppScope) Get(key string) (any, error) {
 	return a.client.Get(a.personaID, a.appID, key)
 }
 
 // Delete removes a key using the scoped persona and app.
-func (a *AppScope) Delete(key string) error {
+func (a *RemoteAppScope) Delete(key string) error {
 	return a.client.Delete(a.personaID, a.appID, key)
 }
 
 // Vault returns a scope that automatically encrypts/decrypts data.
-// It returns any to satisfy the engine.AppScope interface.
-func (a *AppScope) Vault(masterKey []byte) any {
-	return &VaultScope{
+// It returns any to satisfy the AppScope interface.
+func (a *RemoteAppScope) Vault(masterKey []byte) any {
+	return &RemoteVaultScope{
 		app:       a,
 		masterKey: masterKey,
 	}
 }
 
-// VaultScope provides client-side encryption for sensitive data.
-type VaultScope struct {
-	app       *AppScope
+// RemoteVaultScope provides client-side encryption for sensitive data.
+type RemoteVaultScope struct {
+	app       *RemoteAppScope
 	masterKey []byte
 }
 
 // Set encrypts the plaintext and stores it in the scoped app.
-func (v *VaultScope) Set(key string, plaintext string) error {
+func (v *RemoteVaultScope) Set(key string, plaintext string) error {
 	// 1. Encrypt locally before sending
 	ciphertext, err := vault.Encrypt(plaintext, v.masterKey)
 	if err != nil {
@@ -254,7 +253,7 @@ func (v *VaultScope) Set(key string, plaintext string) error {
 }
 
 // Get retrieves and decrypts a value from the scoped app.
-func (v *VaultScope) Get(key string) (string, error) {
+func (v *RemoteVaultScope) Get(key string) (string, error) {
 	// 1. Get the encrypted hex string from the store
 	val, err := v.app.Get(key)
 	if err != nil {

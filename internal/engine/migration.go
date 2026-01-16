@@ -1,12 +1,16 @@
 package engine
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/celerix-dev/celerix-store/pkg/sdk"
+)
 
 // Migrate takes data from a source store and pushes it to a destination store.
 // This works for:
 // - Embedded -> Remote (The "Upgrade")
 // - Remote -> Embedded (The "Backup/Offline")
-func Migrate(src CelerixStore, dst CelerixStore) error {
+func Migrate(src sdk.CelerixStore, dst sdk.CelerixStore) error {
 	// 1. Get all Personas from the source
 	personas, err := src.GetPersonas()
 	if err != nil {

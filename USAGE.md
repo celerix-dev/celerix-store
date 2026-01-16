@@ -4,10 +4,11 @@ This guide provides detailed examples and best practices for using the `celerix-
 
 ## Core Concepts
 
-### Data Hierarchy
-- **Persona:** Represents a user or a system entity. Each persona's data is stored in its own JSON file.
-- **App:** A namespace within a persona. This allows multiple applications to store data for the same persona without collisions.
-- **Key:** The specific identifier for a piece of data within an app namespace.
+### Interface Segregation
+The platform is built on small, task-specific interfaces. Applications should depend on the minimal interface they require:
+- `sdk.KVReader`: For read-only services.
+- `sdk.KVWriter`: For services that only need to update state.
+- `sdk.GlobalSearcher`: For administrative or indexing tools.
 
 ### In-Memory Sync Architecture
 The `celerix-store` operates on an "In-Memory First" principle:

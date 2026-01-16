@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/celerix-dev/celerix-store/internal/vault"
+	"github.com/celerix-dev/celerix-store/pkg/sdk"
 )
 
 // MemStore is a thread-safe, in-memory implementation of the CelerixStore interface.
@@ -251,7 +252,7 @@ func (m *MemStore) Move(srcPersona, dstPersona, appID, key string) error {
 // --- Scoping Support ---
 
 // App returns an AppScope that "pins" the persona and application for subsequent operations.
-func (m *MemStore) App(personaID, appID string) AppScope {
+func (m *MemStore) App(personaID, appID string) sdk.AppScope {
 	return &memAppScope{
 		store:     m,
 		personaID: personaID,
@@ -307,4 +308,20 @@ func (v *memVaultScope) Get(key string) (string, error) {
 		return "", fmt.Errorf("stored value is not a string")
 	}
 	return vault.Decrypt(cipherHex, v.masterKey)
+}
+
+func init() {
+	sdk.RegisterEngine(&engineProvider{})
+}
+
+type engineProvider struct{}
+
+func (e *engineProvider) NewPersistence(dir string) (sdk.Persistence, error) {
+	return NewPersistence(dir)
+}
+
+func (e *engineProvider) NewMemStore(initialData map[string]map[string]map[string]any, p sdk.Persistence) sdk.CelerixStore {
+	// We need to type assert Persistence back to our concrete type
+	persister, _ := p.(*Persistence)
+	return NewMemStore(initialData, persister)
 }

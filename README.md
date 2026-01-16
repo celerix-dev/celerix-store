@@ -92,33 +92,35 @@ token, _ := vault.Get("api_token")
 
 ## Developer Reference
 
+### Core Interfaces & Types (`pkg/sdk`)
+Celerix Store follows the **Interface Segregation Principle**. Use the smallest interface your application needs:
+
+- **`KVReader`**: Basic `Get` operations.
+- **`KVWriter`**: `Set` and `Delete` operations.
+- **`AppEnumeration`**: Discovering personas and apps.
+- **`BatchExporter`**: Bulk data retrieval (`DumpApp`, `GetAppStore`).
+- **`GlobalSearcher`**: Finding keys across all personas (`GetGlobal`).
+- **`Orchestrator`**: High-level operations (`Move`).
+- **`CelerixStore`**: The full composite interface.
+
 ### The `CelerixStore` Interface
 Any storage implementation (Embedded or Client) satisfies this:
 ```go
 type CelerixStore interface {
-    Get(personaID, appID, key string) (any, error)
-    Set(personaID, appID, key string, val any) error
-    Delete(personaID, appID, key string) error
-    GetApps(personaID string) ([]string, error)
-    GetPersonas() ([]string, error)
-    GetAppStore(personaID, appID string) (map[string]any, error)
-
-    // Advanced Querying
-    DumpApp(appID string) (map[string]map[string]any, error)
-    GetGlobal(appID, key string) (any, string, error)
-    Move(srcPersona, dstPersona, appID, key string) error
+    KVReader
+    KVWriter
+    AppEnumeration
+    BatchExporter
+    GlobalSearcher
+    Orchestrator
 
     // Scoping
     App(personaID, appID string) AppScope
 }
-
-type AppScope interface {
-    Get(key string) (any, error)
-    Set(key string, val any) error
-    Delete(key string) error
-    Vault(masterKey []byte) any
-}
 ```
+
+### Shared Schemas (`pkg/schema`)
+Common data structures used across the Celerix ecosystem (e.g., `UserRecord`, `AuditLog`) are available in `pkg/schema` to ensure data consistency between different services.
 
 ## CLI & Tooling
 
