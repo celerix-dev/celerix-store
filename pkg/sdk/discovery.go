@@ -41,7 +41,9 @@ func New(dataDir string) (CelerixStore, error) {
 
 	// 2. Fallback to Embedded Mode
 	if provider == nil {
-		return nil, errors.New("embedded engine not registered")
+		// Attempt to auto-register if we are in the same module
+		// Actually, we can't do it easily without a dependency.
+		return nil, errors.New("embedded engine not registered. Import github.com/celerix-dev/celerix-store/pkg/engine or use Remote Mode")
 	}
 
 	p, err := provider.NewPersistence(dataDir)

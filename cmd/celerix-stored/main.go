@@ -7,14 +7,14 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/celerix-dev/celerix-store/internal/engine"
 	"github.com/celerix-dev/celerix-store/internal/server"
 	"github.com/celerix-dev/celerix-store/internal/vault"
+	"github.com/celerix-dev/celerix-store/pkg/engine"
 )
 
 func main() {
 	fmt.Println("Starting Celerix Store Daemon...")
-	
+
 	dataDir := os.Getenv("CELERIX_DATA_DIR")
 	if dataDir == "" {
 		dataDir = "./data"

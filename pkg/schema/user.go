@@ -1,3 +1,4 @@
+// Package schema defines universal data structures used across the Celerix platform.
 package schema
 
 import "time"

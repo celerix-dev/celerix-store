@@ -1,3 +1,4 @@
+// Package engine defines the core storage engine for the Celerix Store.
 package engine
 
 import "errors"

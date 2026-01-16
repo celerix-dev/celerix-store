@@ -1,4 +1,3 @@
-// Package engine defines the core interfaces and types for the Celerix Store.
 package engine
 
 import (
