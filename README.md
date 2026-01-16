@@ -56,7 +56,7 @@ Multiple services can share state via the `celerix-stored` daemon.
 ```yaml
 services:
   celerix-store:
-    build: .
+    image: ghcr.io/celerix-dev/celerix-store:latest
     ports: ["7001:7001"]
     volumes: ["./data:/app/data"]
 

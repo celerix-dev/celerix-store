@@ -18,6 +18,6 @@ COPY --from=builder /app/celerix-stored /celerix-stored
 
 # Distroless doesn't have a shell, so we must use the "exec" form
 # We also ensure the data directory is handled via a Volume in Compose
-EXPOSE 7000
+EXPOSE 7001
 
 ENTRYPOINT ["/celerix-stored"]
