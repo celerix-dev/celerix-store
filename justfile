@@ -27,9 +27,14 @@ clean:
     rm -rf bin/
     rm -f data/*.tmp
 
+# Run unit tests
+unit-tests:
+    @echo "Running unit tests..."
+    go test -v ./...
+
 # Run a quick terminal health check
 [confirm]
-test:
+test: unit-tests
     @echo "Running TCP Health Check..."
     @echo "PING" | nc localhost {{port}}
     @echo "LIST_PERSONAS" | nc localhost {{port}}

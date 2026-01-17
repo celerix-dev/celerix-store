@@ -7,14 +7,17 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/celerix-dev/celerix-store/pkg/sdk"
 )
 
 type Router struct {
-	store sdk.CelerixStore
-	cert  *tls.Certificate
+	store    sdk.CelerixStore
+	cert     *tls.Certificate
+	listener net.Listener
+	mu       sync.Mutex
 }
 
 func NewRouter(s sdk.CelerixStore) *Router {
@@ -24,6 +27,16 @@ func NewRouter(s sdk.CelerixStore) *Router {
 // SetCertificate sets the TLS certificate for the router
 func (r *Router) SetCertificate(cert tls.Certificate) {
 	r.cert = &cert
+}
+
+// Stop closes the listener and stops the server
+func (r *Router) Stop() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.listener != nil {
+		r.listener.Close()
+		r.listener = nil
+	}
 }
 
 // Listen starts the TCP server
@@ -40,13 +53,31 @@ func (r *Router) Listen(port string) error {
 	if err != nil {
 		return err
 	}
-	defer listener.Close()
+
+	r.mu.Lock()
+	r.listener = listener
+	r.mu.Unlock()
+
+	defer func() {
+		r.mu.Lock()
+		if r.listener != nil {
+			r.listener.Close()
+			r.listener = nil
+		}
+		r.mu.Unlock()
+	}()
 
 	semaphore := make(chan struct{}, 100) // Max 100 concurrent connections
 
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
+			r.mu.Lock()
+			isNil := r.listener == nil
+			r.mu.Unlock()
+			if isNil {
+				return nil // Graceful shutdown
+			}
 			continue
 		}
 
@@ -67,6 +98,10 @@ func (r *Router) Listen(port string) error {
 			r.handleConnection(c)
 		}(conn)
 	}
+}
+
+func (r *Router) HandleConnection(conn net.Conn) {
+	r.handleConnection(conn)
 }
 
 func (r *Router) handleConnection(conn net.Conn) {

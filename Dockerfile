@@ -14,6 +14,8 @@ RUN go mod download
 COPY . .
 # Copy the built frontend to the backend directory for embedding
 COPY --from=frontend-builder /app/frontend/dist ./cmd/celerix-stored/dist
+# Run tests during build
+RUN go test ./...
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o celerix-stored ./cmd/celerix-stored/main.go
 
 # Stage 3: Final Image

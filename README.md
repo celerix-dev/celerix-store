@@ -1,5 +1,7 @@
 # celerix-store
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/celerix-dev/celerix-store.svg)](https://pkg.go.dev/github.com/celerix-dev/celerix-store)
+
 `celerix-store` is a lightweight, low-latency Key-Value (KV) data store designed for the Celerix suite of applications. It provides a **"Liquid Data"** experience, allowing applications to seamlessly transition between local-first embedded storage and a networked, shared service without changing application logic.
 
 ### What it does
