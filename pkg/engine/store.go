@@ -4,7 +4,7 @@ package engine
 import "errors"
 
 // Standard errors for the engine.
-// Note: We keep these here for internal engine use, but SDK will have its own
+// Note: We keep these here for internal engine use, but SDK will have its own,
 // or we can alias them if we want exact matching.
 var (
 	ErrPersonaNotFound = errors.New("persona not found")

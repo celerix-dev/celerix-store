@@ -72,7 +72,7 @@ func (m *MemStore) Set(personaID, appID, key string, val any) error {
 
 	m.data[personaID][appID][key] = val
 
-	// Deep copy the persona's state to save safely in background
+	// Deep copy the persona's state to save safely in the background
 	currentPersonaData := m.copyPersonaData(personaID)
 	m.mu.Unlock()
 
@@ -81,7 +81,10 @@ func (m *MemStore) Set(personaID, appID, key string, val any) error {
 		m.wg.Add(1)
 		go func(pID string, data map[string]map[string]any) {
 			defer m.wg.Done()
-			m.persister.SavePersona(pID, data)
+			err := m.persister.SavePersona(pID, data)
+			if err != nil {
+				return
+			}
 		}(personaID, currentPersonaData)
 	}
 	return nil
@@ -94,7 +97,7 @@ func (m *MemStore) Delete(personaID, appID, key string) error {
 			delete(a, key)
 		}
 	}
-	// Deep copy the persona's state to save safely in background
+	// Deep copy the persona's state to save safely in the background
 	currentPersonaData := m.copyPersonaData(personaID)
 	m.mu.Unlock()
 
@@ -102,7 +105,10 @@ func (m *MemStore) Delete(personaID, appID, key string) error {
 		m.wg.Add(1)
 		go func(pID string, data map[string]map[string]any) {
 			defer m.wg.Done()
-			m.persister.SavePersona(pID, data)
+			err := m.persister.SavePersona(pID, data)
+			if err != nil {
+				return
+			}
 		}(personaID, currentPersonaData)
 	}
 	return nil
@@ -158,11 +164,11 @@ func (m *MemStore) GetAppStore(personaID, appID string) (map[string]any, error) 
 	if p, ok := m.data[personaID]; ok {
 		if a, ok := p[appID]; ok {
 			// Return a copy to prevent external mutation of the internal map
-			copy := make(map[string]any)
+			appCopy := make(map[string]any)
 			for k, v := range a {
-				copy[k] = v
+				appCopy[k] = v
 			}
-			return copy, nil
+			return appCopy, nil
 		}
 	}
 	return nil, ErrAppNotFound
@@ -201,7 +207,7 @@ func (m *MemStore) GetGlobal(appID, key string) (any, string, error) {
 
 func (m *MemStore) Move(srcPersona, dstPersona, appID, key string) error {
 	m.mu.Lock()
-	// 1. Check if source exists
+	// 1. Check if a source exists
 	srcP, ok := m.data[srcPersona]
 	if !ok {
 		m.mu.Unlock()
@@ -237,11 +243,17 @@ func (m *MemStore) Move(srcPersona, dstPersona, appID, key string) error {
 		m.wg.Add(2)
 		go func() {
 			defer m.wg.Done()
-			m.persister.SavePersona(srcPersona, srcCopy)
+			err := m.persister.SavePersona(srcPersona, srcCopy)
+			if err != nil {
+				return
+			}
 		}()
 		go func() {
 			defer m.wg.Done()
-			m.persister.SavePersona(dstPersona, dstCopy)
+			err := m.persister.SavePersona(dstPersona, dstCopy)
+			if err != nil {
+				return
+			}
 		}()
 	}
 
@@ -250,7 +262,7 @@ func (m *MemStore) Move(srcPersona, dstPersona, appID, key string) error {
 
 // --- Scoping Support ---
 
-// App returns an AppScope that "pins" the persona and application for subsequent operations.
+// App returns an AppScope that "pins" the persona and application for later operations.
 func (m *MemStore) App(personaID, appID string) sdk.AppScope {
 	return &memAppScope{
 		store:     m,
